@@ -1,0 +1,11 @@
+{
+	"Name": "Exponent Display Mod",
+	"ID": "exponent-display-mod",
+	"Author": "NewDark",
+	"Description": "Changes how exponential notation numbers are displayed",
+	"ModVersion": 1,
+	"GameVersion": 2.052,
+	"Date": "2023-05-27",
+	"Dependencies": [],
+	"Disabled": 0
+}
