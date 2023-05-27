@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "target": "es2016",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "importHelpers": false,
+        "allowJs": true,
+        "rootDir": "src",
+        "outDir": "dist"
+    }
+}
