@@ -20,29 +20,4 @@ export class NumberDetails
         this.isNegative = (val < 0);
         this.isExponential = this.fixedStr.indexOf('e+') != -1;
     }
-
-    toTripleZero(): TripleZeroNumber
-    {
-        let result: TripleZeroNumber = {
-            reducedValue: this.val,
-            tripleZeroCount: 0
-        };
-
-        while (result.reducedValue <= -1000 || result.reducedValue >= 1000) 
-        {
-            result.tripleZeroCount += 1;
-            result.reducedValue = result.reducedValue * 0.001;
-        }
-        return result;
-    }
-
-    formattedTripleZero(): string 
-    {
-        const tripleDetails = this.toTripleZero();
-        let fixedCount = 3;
-        if (Math.abs(tripleDetails.reducedValue) < 100) fixedCount++; 
-        if (Math.abs(tripleDetails.reducedValue) < 10) fixedCount++; 
-
-        return `${tripleDetails.reducedValue.toFixed(fixedCount)}[${tripleDetails.tripleZeroCount}×000]`;
-    }
 }

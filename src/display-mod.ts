@@ -1,31 +1,30 @@
 import { config } from "./config";
+import { NumberFormatter } from "./exponential-formatter";
+import { MENU_ON_CHANGE, MenuHandler, MenuKeys } from "./menu-handler";
 import { NumberDetails } from "./number-details";
 
 const originalBeautify = globalThis.Beautify;
 
+export type DisplayModOptions = {
+    format: MenuKeys;
+}
+
 export class DisplayMod implements Game.Mod 
 {   
+    private options: Partial<DisplayModOptions>;
+    private menuHandler = new MenuHandler("#menu");
+    private numberFormatter = new NumberFormatter();
+
     constructor() {
-        
+        this.options = { 
+            format: "triple-zero-x" 
+        };
     }
 
     private isRawFormat() { return Game.prefs.format == 1; }
 
-    private formatNormal(val: number) 
-    {
-        let formatted = numberFormatters[this.isRawFormat() ? 2 : 1](val);
-        return `${ formatted }`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    }
-
-    private formatExponential(numberDetails: NumberDetails): string
-    {
-        return numberDetails.formattedTripleZero();
-    }
-
     // 'disabled' is a property that the steam version sets to track if it's disabled or not.
     private _disabled: boolean = false;
-    get disabled(): boolean { return this._disabled; }
-    set disabled(value: boolean) {  this._disabled = value; this.setGlobalBeautify(); }
 
     setGlobalBeautify() {
         if (this._disabled) {
@@ -45,7 +44,7 @@ export class DisplayMod implements Game.Mod
 
         if (numberDetails.isExponential && this.isRawFormat())
         {
-            return this.formatExponential(numberDetails);
+            return this.numberFormatter.formatExponential(numberDetails, this.options.format);
         }
         else 
         {
@@ -62,7 +61,7 @@ export class DisplayMod implements Game.Mod
             if (floats > 0 && numberDetails.fixedNum == val + 1)
                 val++;
 
-            output = this.formatNormal(val)
+            output = this.numberFormatter.formatNormal(val, this.isRawFormat())
         }
 
         const negative = (output == '0' ? false : numberDetails.isNegative);
@@ -72,8 +71,13 @@ export class DisplayMod implements Game.Mod
 
     init()
     {
-        //this function is called as soon as the mod is registered
-        //declare hooks here
+        this.menuHandler.observe();
+        this.options.format = this.menuHandler.getSelection();
+
+        globalThis.document.addEventListener(MENU_ON_CHANGE, (event: CustomEvent<MenuKeys>) => {
+            this.options.format = event.detail;
+            Game.BuildStore();
+        })
 
         //note: this mod does nothing but show a notification at the bottom of the screen once it's loaded
         Game.Notify(`${config.modId} loaded!`, '', [16, 5]);
@@ -88,16 +92,16 @@ export class DisplayMod implements Game.Mod
     }
     save()
     {
-        //use this to store persistent data associated with your mod
-        return "";
+        return JSON.stringify(this.options);
     }
     load(str)
     {
-        //do stuff with the string data you saved previously
-    }
-
-    emitModState() 
-    {
-        Game.Notify(`${config.modId} state`, JSON.stringify(this), [16, 5]);
+        if (!str) 
+            return;
+        
+        this.options = JSON.parse(str);
+        if (this.options.format) {
+            this.menuHandler.setSelection(this.options.format);
+        }
     }
 }
