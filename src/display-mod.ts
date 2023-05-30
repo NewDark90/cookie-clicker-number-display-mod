@@ -78,17 +78,8 @@ export class DisplayMod implements Game.Mod
             this.options.format = event.detail;
             Game.BuildStore();
         })
-
-        //note: this mod does nothing but show a notification at the bottom of the screen once it's loaded
-        Game.Notify(`${config.modId} loaded!`, '', [16, 5]);
-
+        
         this.setGlobalBeautify();
-
-        /*
-        setInterval(() => {
-            this.emitModState()              
-        }, 1000 * 30)
-        */
     }
     save()
     {
