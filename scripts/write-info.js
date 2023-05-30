@@ -11,7 +11,7 @@ const config = {
 	"Description": "Adds many different options for formatting numbers in exponential notation.",
 	"ModVersion": parseInt(process.env.MOD_VERSION),
 	"GameVersion": parseFloat(process.env.GAME_VERSION),
-	"Date": `${today.getDay()}/${today.getMonth()}/${today.getFullYear()}`,
+	"Date": `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`,
 	"Dependencies": [],
 	"Disabled": 0,
     "AllowSteamAchievs": 1
