@@ -8,6 +8,8 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
+const modVersion = parseInt(process.env.MOD_VERSION ?? "1");
+
 const options = {
     input: 'src/index.ts',
     output: {
@@ -18,7 +20,9 @@ const options = {
     plugins: [
         del({ targets: 'dist/*' }),
         typescript(),
-        copy({ assets: [ "src/thumbnail.png" ]}),
+        //Updating with the thumbnail will break.
+        //https://reddit.com/r/CookieClicker/comments/rrb9tj/error_publishing_to_workshop/
+        copy({ assets: modVersion == 1 ? [ "src/thumbnail.png" ] : []}),
         command(`node scripts/write-info.js`),
     ]
 };
