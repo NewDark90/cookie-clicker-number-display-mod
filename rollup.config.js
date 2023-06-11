@@ -12,6 +12,7 @@ const options = {
     input: 'src/index.ts',
     output: {
         file: `dist/${process.env.MOD_ID}/main.js`,
+        name: "DISPLAY_MOD",
         format: "iife"
     },
     plugins: [

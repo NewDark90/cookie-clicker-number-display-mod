@@ -1,19 +1,17 @@
-import { config } from "./config";
-import { NumberFormatter } from "./exponential-formatter";
+import { NumberFormatter } from "./number-formatter";
 import { MENU_ON_CHANGE, MenuHandler, MenuKeys } from "./menu-handler";
 import { NumberDetails } from "./number-details";
-
-const originalBeautify = globalThis.Beautify;
+import { beautifyOverride } from "./beautify-override";
 
 export type DisplayModOptions = {
     format: MenuKeys;
 }
-
 export class DisplayMod implements Game.Mod 
 {   
     private options: Partial<DisplayModOptions>;
     private menuHandler = new MenuHandler("#menu");
     private numberFormatter = new NumberFormatter();
+    private customBeautifiers: CCSECustomBeautify[];
 
     constructor() {
         this.options = { 
@@ -23,20 +21,13 @@ export class DisplayMod implements Game.Mod
 
     private isRawFormat() { return Game.prefs.format == 1; }
 
-    // 'disabled' is a property that the steam version sets to track if it's disabled or not.
-    private _disabled: boolean = false;
-
     setGlobalBeautify() {
-        if (this._disabled) {
-            globalThis.Beautify = this.getBaseBeautify();
-        } else {
-            globalThis.Beautify = this.beautify;
-        }
+        beautifyOverride();
+        this.customBeautifiers = Game.customBeautify;
+        this.customBeautifiers.push(this.beautify);
     }
 
-    getBaseBeautify = () => originalBeautify;
-
-    beautify: typeof Beautify = (val: number, floats?: number) =>
+    beautify: CCSECustomBeautify = (val: number, floats?: number, _ret?: string) =>
     {
         const numberDetails = new NumberDetails(val, floats);
         let decimal = '';
@@ -80,11 +71,14 @@ export class DisplayMod implements Game.Mod
         })
         
         this.setGlobalBeautify();
+        Game.BuildStore();
     }
+    
     save()
     {
         return JSON.stringify(this.options);
     }
+
     load(str)
     {
         if (!str) 
@@ -96,3 +90,5 @@ export class DisplayMod implements Game.Mod
         }
     }
 }
+
+globalThis["DisplayMod"] = DisplayMod;
