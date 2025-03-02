@@ -1,7 +1,16 @@
 import { config } from "./config";
+import { ICustomFormatter, IntlNumberCustomFormatter } from "./custom-formatter";
+import { htmlToNode, tryParseJson } from "./util";
 
 export const MENU_ON_CHANGE = `${config.modId}-OnChange` as const;
-export type MenuKeys =  "base" | "triple-zero-x" |  "nine-point-exponent" | "no-short" | "dot-thousands";
+export type OptionsMenuChangeEvent = CustomEvent<OptionsMenuChangeEventDetail>
+export type OptionsMenuChangeEventDetail = {
+    format: MenuKeys;
+    customFormatLocale: string;
+    customFormatOptions: string;
+    customFormatter?: ICustomFormatter;
+}
+export type MenuKeys =  "base" | "triple-zero-x" |  "nine-point-exponent" | "no-short" | "dot-thousands" | "custom";
 
 export class MenuHandler 
 {
@@ -13,24 +22,47 @@ export class MenuHandler
         { value: "triple-zero-x", display: "Thousand Chunks", description: "Displays within range of 1-1000, with 9 digits of precision. Thousands formatted like [n×000]." },
         { value: "dot-thousands", display: "Thousand Dots", description: "Like \"Unshorten\", but 000 represented by •" },
         { value: "no-short", display: "Unshorten", description: "Forces the regular raw format with trailing zeros. May conflict with styling." },
+        { value: "custom", display: "Custom (advanced)", description: 
+            `Gives you much more control by allowing you to plug in a javascript configuration based on <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat" target="_blank">Intl.NumberFormat</a>. ` + 
+            `Options settings expected as a JSON object, <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat" target="_blank">Number format options defined here</a>. ` 
+        },
     ];
-    private selection: MenuKeys = "triple-zero-x";
     private wrapper: HTMLDivElement;
     private dropdown: HTMLSelectElement;
-    private label: HTMLLabelElement;
+    private instructionsLabel: HTMLLabelElement;
+    private localeInput: HTMLInputElement;
+    private optionsInput: HTMLTextAreaElement;
+    private validSpan: HTMLSpanElement;
+
+    private _selection: MenuKeys = "triple-zero-x";
+    get selection(): MenuKeys { return this._selection }
+    set selection(val: MenuKeys) { 
+        if (this.dropdown)
+            this.dropdown.value = val;
+        this._selection = val;
+    }
+
+    private _customFormatLocale: string = "en-US";
+    get customFormatLocale(): string { return this._customFormatLocale }
+    set customFormatLocale(val: string) { 
+        if (this.localeInput)
+            this.localeInput.value = val;
+        this._customFormatLocale = val;
+    }
+
+    private _customFormatOptions: string = "{}";
+    get customFormatOptions(): string { return this._customFormatOptions }
+    set customFormatOptions(val: string) { 
+        if (this.optionsInput)
+            this.optionsInput.value = val;
+        this._customFormatOptions = val;
+    }
 
     constructor(
         private menuSelector: string
     ) 
     {
 
-    }
-
-    getSelection = () => this.selection;
-    setSelection(val: MenuKeys) 
-    {
-        this.dropdown.value = val;
-        this.selection = val;
     }
 
     observe() 
@@ -62,50 +94,79 @@ export class MenuHandler
         return this.observer;
     }
 
+    addMenuListener(element: EventTarget, handler: (event: OptionsMenuChangeEvent) => void) {
+        element.addEventListener(MENU_ON_CHANGE, handler);
+    }
+
+    
+
     private buildDom() {
         globalThis.document.head.append(this.buildStyles());
-        this.wrapper = this.buildWrapper();
-        this.dropdown = this.buildDropdown();
-        this.label = this.buildLabel();
-        this.wrapper.append(this.dropdown);
-        this.wrapper.append(this.label);
-    }
 
-    private buildWrapper() 
-    {
-        const wrapper = globalThis.document.createElement("div");
-        wrapper.className = "listing";
-        wrapper.id = "exponential-mod-settings";
-        return wrapper;
-    }
+        this.wrapper = htmlToNode(`
+        <div id="exponential-mod-settings" class="listing">
+            <select id="custom-format-type" class="dropdown-setting" value="${this.selection}">
+                ${this.menuItems.map(i => `<option value="${i.value}">${i.display}</option>`).join(" ")}
+            </select>
+            <label id="custom-format-instructions">
+                ${this.getSelectionLabelText(this.selection)}
+            </label>
+            <br>
+            <input id="custom-format-locale" class="custom-format-node exponent-mod-setting-input" type="text" value="${this.customFormatLocale}" />
+            <label class="custom-format-node" >${this.getLabelText('Custom Format Language (BCP 47 Langauge Tag)')}</label>
+            <br>
+            <textarea id="custom-format-options" class="custom-format-node exponent-mod-setting-input">
+                ${this.customFormatOptions}
+            </textarea>
+            <label class="custom-format-node">
+                <span id="custom-format-valid"></span>
+                ${this.getLabelText('Custom Format Options (JSON format, just paste your settings)')}
+            </label>
+        </div> 
+        `);
 
-    private buildDropdown() 
-    {
-        const dropdown = globalThis.document.createElement("select");
-        dropdown.className = "dropdown-setting";
-        dropdown.innerHTML = this.menuItems.map(i => `<option value="${i.value}">${i.display}</option>`).join(" ");
-        dropdown.addEventListener("change", () => {
-            this.selection = dropdown.value as MenuKeys;
-            this.label.innerHTML = this.getLabelText(this.selection);
-            const event = new CustomEvent(MENU_ON_CHANGE, {
-                detail: this.selection,
-                bubbles: true,
-            });
-            dropdown.dispatchEvent(event);
+
+        this.dropdown = this.wrapper.querySelector("#custom-format-type");
+        this.dropdown.addEventListener("change", () => {
+            this.selection = this.dropdown.value as MenuKeys;
+            this.instructionsLabel.innerHTML = this.getSelectionLabelText(this._selection);
+            this.dispatchMenuChangeEvent(this.dropdown);
         });
-        dropdown.value = this.selection;
-        return dropdown;
-    }
+        this.instructionsLabel = this.wrapper.querySelector("#custom-format-instructions");
+        this.localeInput = this.wrapper.querySelector("#custom-format-locale");
+        this.localeInput.addEventListener("input", () => {
+            this.customFormatLocale = this.localeInput.value;
+            this.dispatchMenuChangeEvent(this.localeInput);
+        });
+        this.optionsInput = this.wrapper.querySelector("#custom-format-options");
+        this.optionsInput.addEventListener("input", () => {
+            this.customFormatOptions = this.optionsInput.value;
+            this.dispatchMenuChangeEvent(this.optionsInput);
+        });
+        this.validSpan = this.wrapper.querySelector("#custom-format-valid");
 
-    private buildLabel() {
-        const label = globalThis.document.createElement("label");
-        label.innerHTML = this.getLabelText(this.selection);
-        return label;
+        this.addMenuListener(this.wrapper, (event: OptionsMenuChangeEvent) => {
+            const customFormatNodes = this.wrapper.querySelectorAll<HTMLElement>(".custom-format-node");
+            customFormatNodes.forEach((element) => {
+                const isCustom = event.detail.format === "custom";
+                element.style.display = isCustom ? "" : "none";
+                if (event.detail.customFormatter?.isValid === true) {
+                    this.validSpan.innerHTML = "✅";
+                } else if (event.detail.customFormatter?.isValid === false) {
+                    this.validSpan.innerHTML = "❌";
+                } else {
+                    this.validSpan.innerHTML = "";
+                }
+            });
+        });
+
+        this.dispatchMenuChangeEvent(this.validSpan);
     }
 
     private buildStyles() {
         const style = globalThis.document.createElement("style")
         style.textContent = `
+            .exponent-mod-setting-input,
             .dropdown-setting {
                 display:inline-block;
                 margin:2px 4px 2px 0px;
@@ -130,12 +191,40 @@ export class MenuHandler
                 line-height:100%;
                 text-align: right;
             }
+
+            #exponential-mod-settings textarea {
+                height: 4em;
+                width: 50em;
+            }
         `;
         return style;
     }
 
-    private getLabelText(selection: MenuKeys) 
+    private getSelectionLabelText(selection: MenuKeys) 
     {
-        return `(${config.modId} - ${this.menuItems.find(item => item.value == selection)?.description})`;
+        return this.getLabelText(this.menuItems.find(item => item.value == selection)?.description);
+    }
+
+    private getLabelText(text: string) 
+    {
+        return `(${config.modId} - ${text})`;
+    }
+
+    private dispatchMenuChangeEvent(element: EventTarget) {
+        const detail: OptionsMenuChangeEventDetail = {
+            format: this.selection,
+            customFormatLocale: this.customFormatLocale,
+            customFormatOptions: this.customFormatOptions,
+        };
+
+        detail.customFormatter = this.selection === "custom" 
+            ? new IntlNumberCustomFormatter(this.customFormatLocale, this.customFormatOptions)
+            : null;
+        
+        const event = new CustomEvent<OptionsMenuChangeEventDetail>(MENU_ON_CHANGE, {
+            detail: detail,
+            bubbles: true,
+        });
+        element.dispatchEvent(event);
     }
 }

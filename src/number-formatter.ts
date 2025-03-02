@@ -1,26 +1,40 @@
 
+import { ICustomFormatter } from "./custom-formatter";
 import { MenuKeys } from "./menu-handler";
 import { NumberDetails, TripleZeroNumber } from "./number-details";
 
+export interface NumberFormatterOptions {
+    format: MenuKeys,
+    customFormatter?: ICustomFormatter
+}
+
 export class NumberFormatter 
 {
-    formatExponential(numberDetails: NumberDetails, format: MenuKeys): string
+    formatExponential(numberDetails: NumberDetails, options: NumberFormatterOptions): string
     {
-        if (format === "triple-zero-x") 
+        if (options.format === "triple-zero-x") 
         {
             return this.formatTripleZero(numberDetails);
         } 
-        else if (format === "nine-point-exponent") 
+        else if (options.format === "nine-point-exponent") 
         {
             return numberDetails.val.toPrecision(10);
         }
-        else if (format === "dot-thousands") 
+        else if (options.format === "dot-thousands") 
         {
             return this.formatDotThousands(numberDetails);
         }
-        else if (format === "no-short") 
+        else if (options.format === "no-short") 
         {
             return this.formatNoShort(numberDetails);
+        }
+        else if (options.format === "custom") 
+        {
+            if (options.customFormatter) {
+                return options.customFormatter.format(numberDetails);
+            } else {
+                return "BadCustomFormat";
+            }
         }
 
         return numberDetails.val.toPrecision(3);

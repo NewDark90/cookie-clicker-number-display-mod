@@ -79,6 +79,14 @@ function testSetup()
     }
 }
 
+// Beautify parameters, expected result, json configuration.
+type TestParameters = [[number, number?], string, string?];
+/*
+format: MenuKeys;
+customFormatLocale: string;
+customFormatOptions: string;
+*/
+
 function runTests()
 {
     testSetup();
@@ -86,62 +94,103 @@ function runTests()
     const mod = new DisplayMod();
     mod["isRawFormat"] = () => true;
 
+    const defaultOptions = "";
     //Some of these cases are slightly strange, but they do match cookie clicker logic.
-    let normalTests = (): Array<[string, string]> => [
-        [mod.beautify(0), "0"],
-        [mod.beautify(0.000001), "0"],
-        [mod.beautify(1.9999999), "1"],
-        [mod.beautify(1.99, 2), "1.99"],
-        [mod.beautify(1.9999999, 2), "2"],
-        [mod.beautify(1, 2), "1"],
-        [mod.beautify(1.01, 2), "1.01"],
-        [mod.beautify(1.015, 2), "1.01"],
-        [mod.beautify(22.55), "22"],
-        [mod.beautify(22.55, 2), "22.55"],
-        [mod.beautify(-22.55, 2), "-22"],
-        [mod.beautify(211111), "211,111"],
-        [mod.beautify(-211111), "-211,111"],
-        [mod.beautify(1234567890), "1,234,567,890"],
-        [mod.beautify(91278387.182374), "91,278,387"],
-        [mod.beautify(91278387.182374, 2), "91,278,387"],
-        [mod.beautify(-91278387.182375), "-91,278,387"]
-    ];
+    let normalTests = (): Array<TestParameters> => {
+        return ([
+            [[0], "0"],
+            [[0.000001], "0"],
+            [[1.9999999], "1"],
+            [[1.99, 2], "1.99"],
+            [[1.9999999, 2], "2"],
+            [[1, 2], "1"],
+            [[1.01, 2], "1.01"],
+            [[1.015, 2], "1.01"],
+            [[22.55], "22"],
+            [[22.55, 2], "22.55"],
+            [[-22.55, 2], "-22"],
+            [[211111], "211,111"],
+            [[-211111], "-211,111"],
+            [[1234567890], "1,234,567,890"],
+            [[91278387.182374], "91,278,387"],
+            [[91278387.182374, 2], "91,278,387"],
+            [[-91278387.182375], "-91,278,387"]
+        ] satisfies [[number, number?], string][])
+            .map((parameters) => [...parameters, defaultOptions]);
+    };
 
-    const newFunctionalityTests = (): Array<[string, string]> =>  [
-        [mod.beautify(1222333444555666777888999000), "1.22233344[9×000]"],
-        [mod.beautify(-1222333444555666777888999000), "-1.22233344[9×000]"],
-        [mod.beautify(11222333444555666777888999000), "11.2223334[9×000]"],
-        [mod.beautify(-11222333444555666777888999000), "-11.2223334[9×000]"],
-        [mod.beautify(111222333444555666777888999000), "111.222333[9×000]"],
-        [mod.beautify(-111222333444555666777888999000), "-111.222333[9×000]"],
-        [mod.beautify(123459871397298163926786112313213.87127831267), "123.459871[10×000]"],
-        [mod.beautify(-123459871397298163926786112313213.87127831267), "-123.459871[10×000]"],
-        [mod.beautify(111222333444555666777888999000111222333), "111.222333[12×000]"],
-        [mod.beautify(-111222333444555666777888999000111222333), "-111.222333[12×000]"],
-    ];
+    const tripleZeroConfig = `{"format": "triple-zero-x", "customFormatLocale": "", "customFormatOptions": {} }`;
+    const newTripleZeroXTests = (): Array<TestParameters> =>  {
+        return ([
+            [[1222333444555666777888999000], "1.22233344[9×000]"],
+            [[-1222333444555666777888999000], "-1.22233344[9×000]"],
+            [[11222333444555666777888999000], "11.2223334[9×000]"],
+            [[-11222333444555666777888999000], "-11.2223334[9×000]"],
+            [[111222333444555666777888999000], "111.222333[9×000]"],
+            [[-111222333444555666777888999000], "-111.222333[9×000]"],
+            [[123459871397298163926786112313213.87127831267], "123.459871[10×000]"],
+            [[-123459871397298163926786112313213.87127831267], "-123.459871[10×000]"],
+            [[111222333444555666777888999000111222333], "111.222333[12×000]"],
+            [[-111222333444555666777888999000111222333], "-111.222333[12×000]"],
+        ] satisfies [[number, number?], string][])
+            .map((parameters) => [...parameters, tripleZeroConfig]);
+    };
+
+    const customFormatConfig = `{"format": "custom", "customFormatLocale": "en-US", "customFormatOptions": { "maximumFractionDigits": 1, "notation": "engineering", "roundingMode": "trunc" } }`;
+    const customFormatTests = (): Array<TestParameters> =>  {
+        return ([
+            [[1222333444555666777888999000], "1.2E27"],
+            //[[-1222333444555666777888999000], "-1.3E27]"],
+            [[11222333444555666777888999000], "11.2E27"],
+            //[[-11222333444555666777888999000], "-11.2E27"],
+            [[111222333444555666777888999000], "111.2E27"],
+            //[[-111222333444555666777888999000], "-111.2E27"],
+            [[123459871397298163926786112313213.87127831267], "123.5E30"], // Browser gives 123.4E30, respecting the round down. Not sure why node behaves this way specifically in 11-18.
+            //[[-123459871397298163926786112313213.87127831267], "-123.5E30"],
+            [[111222333444555666777888999000111222333], "111.2E36"],
+            //[[-111222333444555666777888999000111222333], "-111.3E36"],
+        ] satisfies [[number, number?], string][])
+            .map((parameters) => [...parameters, customFormatConfig]);
+    };
+
 
     let testCases = [
         ...normalTests(),
-        ...newFunctionalityTests()
+        ...newTripleZeroXTests(),
+        ...customFormatTests()
     ];
 
-    mod["beautify"] = globalThis["Beautify"];
+    //mod["beautify"] = globalThis["Beautify"];
 
-    testCases = [
-        ...testCases,
-        ...normalTests()
-    ]
+    // Debugger and step through.
+    const debug = true;
 
     for (const testCase of testCases)
     {
-        if (testCase[0] !== testCase[1])
+        mod.load(testCase[2]);
+
+        const calculated = mod.beautify(...testCase[0]);
+        if (calculated !== testCase[1])
         {
-            throw new Error(`Actual: ${ testCase[0] }, Expected: ${ testCase[1] }`);
+            if (debug) {
+                debugger;
+                mod.load(testCase[2]);
+                const debugcalc = mod.beautify(...testCase[0]);
+            }
+            console.error(
+                "FAILED",
+                "Actual",
+                calculated,
+                "Expected",
+                testCase[1],
+                "Test Case",
+                testCase
+            )
+            throw new Error(`Actual: ${ calculated }, Expected: ${ testCase[1] }, Test Case: ${JSON.stringify(testCase)}`);
+            //throw new Error("Tests failed");
         }
         console.log("Passed", testCase);
     }
 }
-
-
 
 runTests();

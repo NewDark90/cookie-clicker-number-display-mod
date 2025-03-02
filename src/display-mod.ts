@@ -1,21 +1,32 @@
-import { NumberFormatter } from "./number-formatter";
-import { MENU_ON_CHANGE, MenuHandler, MenuKeys } from "./menu-handler";
+import { NumberFormatter, NumberFormatterOptions } from "./number-formatter";
+import { MenuHandler, MenuKeys, OptionsMenuChangeEventDetail } from "./menu-handler";
 import { NumberDetails } from "./number-details";
 import { beautifyOverride } from "./beautify-override";
+import { config } from "./config";
+import { IntlNumberCustomFormatter } from "./custom-formatter";
 
-export type DisplayModOptions = {
+export interface IModSettings {
     format: MenuKeys;
+    customFormatLocale: string;
+    customFormatOptions: string;
 }
+
 export class DisplayMod implements Game.Mod 
 {   
-    private options: Partial<DisplayModOptions>;
+    private options: IModSettings;
+    private formatterOptions: NumberFormatterOptions;
     private menuHandler = new MenuHandler("#menu");
     private numberFormatter = new NumberFormatter();
     private customBeautifiers: CCSECustomBeautify[];
 
     constructor() {
         this.options = { 
-            format: "triple-zero-x" 
+            format: "triple-zero-x",
+            customFormatLocale: "en-US",
+            customFormatOptions: ""
+        };
+        this.formatterOptions = {
+            format: this.options.format
         };
     }
 
@@ -35,7 +46,7 @@ export class DisplayMod implements Game.Mod
 
         if (numberDetails.isExponential && this.isRawFormat())
         {
-            return this.numberFormatter.formatExponential(numberDetails, this.options.format);
+            return this.numberFormatter.formatExponential(numberDetails, this.formatterOptions);
         }
         else 
         {
@@ -62,23 +73,32 @@ export class DisplayMod implements Game.Mod
 
     init()
     {
+        debugger;
+        this.forceLoad();
         this.menuHandler.observe();
-        this.options.format = this.menuHandler.getSelection();
+        this.options.format = this.menuHandler.selection;
 
-        globalThis.document.addEventListener(MENU_ON_CHANGE, (event: CustomEvent<MenuKeys>) => {
-            this.options.format = event.detail;
+        this.menuHandler.addMenuListener(globalThis.document, (event) => {
+            this.options = event.detail;
+            this.formatterOptions = { 
+                format: this.options.format,
+                customFormatter: event.detail.customFormatter
+            };
+
             Game.BuildStore();
-        })
-        
+        });
+
         this.setGlobalBeautify();
         Game.BuildStore();
     }
     
+    /** Mod hook for settings save. */
     save()
     {
         return JSON.stringify(this.options);
     }
 
+    /** Mod hook for settings load. */
     load(str)
     {
         if (!str) 
@@ -86,7 +106,36 @@ export class DisplayMod implements Game.Mod
         
         this.options = JSON.parse(str);
         if (this.options.format) {
-            this.menuHandler.setSelection(this.options.format);
+            this.menuHandler.selection = this.options.format;
+            this.menuHandler.customFormatLocale = this.options.customFormatLocale;
+            this.menuHandler.customFormatOptions = this.options.customFormatOptions;
+            this.formatterOptions = { 
+                format: this.options.format,
+                customFormatter: new IntlNumberCustomFormatter(
+                    this.menuHandler.customFormatLocale,
+                    this.menuHandler.customFormatOptions
+                )
+            };
+            /*
+            this.formatterOptions = { 
+                format: this.options.format,
+                customFormatter: (
+                    this.options.format == "custom" 
+                    ? new Intl.NumberFormat(
+                        this.options.customFormat?.locale, 
+                        this.options.customFormat?.options
+                    ) 
+                    : null
+                )
+            };
+            */
+        }
+    }
+
+    private forceLoad() {
+        const saveData = Game.modSaveData[config.modId];
+        if (saveData) {
+            this.load(saveData);
         }
     }
 }
