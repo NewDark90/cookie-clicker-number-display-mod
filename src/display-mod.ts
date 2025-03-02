@@ -73,7 +73,6 @@ export class DisplayMod implements Game.Mod
 
     init()
     {
-        debugger;
         this.forceLoad();
         this.menuHandler.observe();
         this.options.format = this.menuHandler.selection;
@@ -107,8 +106,8 @@ export class DisplayMod implements Game.Mod
         this.options = JSON.parse(str);
         if (this.options.format) {
             this.menuHandler.selection = this.options.format;
-            this.menuHandler.customFormatLocale = this.options.customFormatLocale;
-            this.menuHandler.customFormatOptions = this.options.customFormatOptions;
+            this.menuHandler.customFormatLocale = this.options.customFormatLocale ?? "en-US";
+            this.menuHandler.customFormatOptions = this.options.customFormatOptions ?? "";
             this.formatterOptions = { 
                 format: this.options.format,
                 customFormatter: new IntlNumberCustomFormatter(

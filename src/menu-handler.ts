@@ -113,7 +113,7 @@ export class MenuHandler
             </label>
             <br>
             <input id="custom-format-locale" class="custom-format-node exponent-mod-setting-input" type="text" value="${this.customFormatLocale}" />
-            <label class="custom-format-node" >${this.getLabelText('Custom Format Language (BCP 47 Langauge Tag)')}</label>
+            <label class="custom-format-node" >${this.getLabelText('Custom Format Language (BCP 47 Language Tag)')}</label>
             <br>
             <textarea id="custom-format-options" class="custom-format-node exponent-mod-setting-input">
                 ${this.customFormatOptions}

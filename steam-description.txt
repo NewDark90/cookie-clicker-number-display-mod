@@ -1,0 +1,29 @@
+[h1] Exponent Display Mod [/h1]
+
+Adds many different options for formatting numbers in exponential notation.
+
+[b]Important Note[/b]: This mod is affected by the "Shorten Numbers" setting. Turning "Shorten Numbers" OFF will defer fully to the mod settings for displaying numbers.
+
+[h2] Formatting Options [/h2]
+
+[h3] Normal [/h3]
+What the game normally does. Exponential format, 3 digit precision.
+
+[h3] Nine Precision [/h3]
+Exponential notation, but with 10 digit precision.
+
+[h3] Thousand Chunks (Default) [/h3]
+Displays within range of 1-1000, with 9 digits of precision. Thousands formatted like [n×000].
+
+[h3] Unshorten  [/h3]
+Forces the regular raw format with trailing zeros. May conflict with styling.
+
+[h3] Thousand Dots [/h3]
+Like "Unshorten", but 000 represented by •
+
+[h3] Custom (Advanced) [/h3]
+Gives you much more control by allowing you to plug in a javascript configuration based on [url=https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat]Intl.NumberFormat[/url] 
+
+Set your language tag (BCP 47). Example: [code]en-US[/code]
+Set a JSON object of the options for Intl.NumberFormat to leverage built in formatting features. Example: [code]{ "maximumFractionDigits": 1, "notation": "engineering" }[/code]
+[url=https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat] Intl.NumberFormat Parameter options [/url]
